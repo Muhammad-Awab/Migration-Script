@@ -1,0 +1,60 @@
+import subprocess
+import sys
+import os
+import tempfile
+import shutil
+
+def run_command(command, cwd=None):
+    result = subprocess.run(command, shell=True, cwd=cwd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    if result.returncode != 0:
+        print(f"Error running command: {command}")
+        print(result.stderr.decode())
+    return result.stdout.decode()
+
+def clone_and_prepare(repo_url, dest_url):
+    if not repo_url or not dest_url:
+        print("Usage: script.py <repo_url> <destination_url>")
+        return
+
+    # Create a temporary directory
+    temp_dir = tempfile.mkdtemp()
+    print(f"Cloning into temporary directory {temp_dir}")
+
+    try:
+        # Initialize the repository
+        run_command("git init", cwd=temp_dir)
+
+        # Add the remote repository
+        run_command(f"git remote add origin {repo_url}", cwd=temp_dir)
+
+        # Fetch all branches
+        run_command("git fetch origin", cwd=temp_dir)
+
+        # Get a list of all branches
+        branches = run_command("git branch -r | grep -v '\\->' | sed 's/origin\\///'", cwd=temp_dir).split()
+        
+        # Check out each branch
+        for branch in branches:
+            run_command(f"git checkout -b {branch} origin/{branch}", cwd=temp_dir)
+            print(f"Checked out branch {branch}")
+
+        # Set the new remote URL
+        run_command(f"git remote set-url origin {dest_url}", cwd=temp_dir)
+        print(f"Remote URL set to {dest_url}")
+
+        # Push all branches to the new remote
+        run_command("git push --all", cwd=temp_dir)
+        print("All branches have been pushed to the new remote.")
+
+    finally:
+        # Clean up
+        shutil.rmtree(temp_dir)
+        print(f"Cleaned up temporary directory {temp_dir}")
+
+if __name__ == "__main__":
+    if len(sys.argv) != 3:
+        print("Usage: script.py <repo_url> <destination_url>")
+    else:
+        repo_url = sys.argv[1]
+        dest_url = sys.argv[2]
+        clone_and_prepare(repo_url, dest_url)
