@@ -1,0 +1,132 @@
+name: Build and publish all docker-ckan Images
+on: 
+  push:
+    branches:
+      - master
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v1
+      - name: Login to DockerHub
+        uses: docker/login-action@v1
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+      - name: Set CKAN Versions
+        run: |
+          echo CKAN_v2_8=$(grep 'ENV GIT_BRANCH' ckan-base/2.8/Dockerfile | cut -d '-' -f 2) >> $GITHUB_ENV
+          echo CKAN_v2_9=$(grep 'ENV GIT_BRANCH' ckan-base/2.9/Dockerfile | cut -d '-' -f 2) >> $GITHUB_ENV
+          echo CKAN_v2_10=$(grep 'ENV GIT_BRANCH' ckan-base/2.10/Dockerfile | cut -d '-' -f 2) >> $GITHUB_ENV
+      - name: Build ckan-base 2.8 and ${{ env.CKAN_v2_8 }}
+        id: ckan_base_2_8
+        continue-on-error: true
+        uses: docker/build-push-action@v2
+        with:
+          context: ckan-base
+          file: ckan-base/2.8/Dockerfile
+          push: true
+          tags: |
+            openknowledge/ckan-base:2.8
+            openknowledge/ckan-base:${{ env.CKAN_v2_8 }}
+      - name: Build ckan-base 2.9 and ${{ env.CKAN_v2_9 }}
+        id: ckan_base_2_9
+        continue-on-error: true
+        uses: docker/build-push-action@v2
+        with:
+          context: ckan-base
+          file: ckan-base/2.9/Dockerfile
+          push: true
+          tags: |
+            openknowledge/ckan-base:2.9
+            openknowledge/ckan-base:${{ env.CKAN_v2_9 }}
+      - name: Build ckan-base 2.9-py2 and ${{ env.CKAN_v2_9 }}-py2
+        id: ckan_base_2_9_py2
+        continue-on-error: true
+        uses: docker/build-push-action@v2
+        with:
+          context: ckan-base
+          file: ckan-base/2.9/Dockerfile.py2
+          push: true
+          tags: |
+            openknowledge/ckan-base:2.9-py2
+            openknowledge/ckan-base:${{ env.CKAN_v2_9 }}-py2
+      - name: Build ckan-base 2.10 and ${{ env.CKAN_v2_10 }}
+        id: ckan_base_2_10
+        continue-on-error: true
+        uses: docker/build-push-action@v2
+        with:
+          context: ckan-base
+          file: ckan-base/2.10/Dockerfile
+          push: true
+          tags: |
+            openknowledge/ckan-base:2.10
+            openknowledge/ckan-base:${{ env.CKAN_v2_10 }}
+      - name: Build ckan-dev 2.8 and and ${{ env.CKAN_v2_8 }}
+        id: ckan_dev_2_8
+        continue-on-error: true
+        uses: docker/build-push-action@v2
+        with:
+          context: ckan-dev
+          file: ckan-dev/2.8/Dockerfile
+          push: true
+          tags: |
+            openknowledge/ckan-dev:2.8
+            openknowledge/ckan-dev:${{ env.CKAN_v2_8 }}
+      - name: Build ckan-dev 2.9 and ${{ env.CKAN_v2_9 }}
+        id: ckan_dev_2_9
+        continue-on-error: true
+        uses: docker/build-push-action@v2
+        with:
+          context: ckan-dev
+          file: ckan-dev/2.9/Dockerfile
+          push: true
+          tags: |
+            openknowledge/ckan-dev:2.9
+            openknowledge/ckan-dev:${{ env.CKAN_v2_9 }}
+      - name: Build ckan-dev 2.9-py2 and ${{ env.CKAN_v2_9 }}-py2
+        id: ckan_dev_2_9_py2
+        continue-on-error: true
+        uses: docker/build-push-action@v2
+        with:
+          context: ckan-dev
+          file: ckan-dev/2.9/Dockerfile.py2
+          push: true
+          tags: |
+            openknowledge/ckan-dev:2.9-py2
+            openknowledge/ckan-dev:${{ env.CKAN_v2_9 }}-py2
+      - name: Build ckan-dev 2.10 and ${{ env.CKAN_v2_10 }}
+        id: ckan_dev_2_10
+        continue-on-error: true
+        uses: docker/build-push-action@v2
+        with:
+          context: ckan-dev
+          file: ckan-dev/2.10/Dockerfile
+          push: true
+          tags: |
+            openknowledge/ckan-dev:2.10
+            openknowledge/ckan-dev:${{ env.CKAN_v2_10 }}
+
+      - name: Print a list of all steps outcome property
+        run: |
+          echo "ckan-base-2.8 outcome: ${{ steps.ckan_base_2_8.outcome }}"
+          echo "ckan-base-2.9 outcome: ${{ steps.ckan_base_2_9.outcome }}"
+          echo "ckan-base-2.9-py2 outcome: ${{ steps.ckan_base_2_9_py2.outcome }}"
+          echo "ckan-base-2.10 outcome: ${{ steps.ckan_base_2_10.outcome }}"
+          echo "ckan-dev-2.8 outcome: ${{ steps.ckan_dev_2_8.outcome }}"
+          echo "ckan-dev-2.9 outcome: ${{ steps.ckan_dev_2_9.outcome }}"
+          echo "ckan-dev-2.9-py2 outcome: ${{ steps.ckan_dev_2_9_py2.outcome }}"
+          echo "ckan-dev-2.10 outcome: ${{ steps.ckan_dev_2_10.outcome }}"
+          # oneliner if any of them is failue, exit with error
+          [[ "${{ steps.ckan_base_2_8.outcome }}" == "failure" ]] && exit 1
+          [[ "${{ steps.ckan_base_2_9.outcome }}" == "failure" ]] && exit 1
+          [[ "${{ steps.ckan_base_2_9_py2.outcome }}" == "failure" ]] && exit 1
+          [[ "${{ steps.ckan_base_2_10.outcome }}" == "failure" ]] && exit 1
+          [[ "${{ steps.ckan_dev_2_8.outcome }}" == "failure" ]] && exit 1
+          [[ "${{ steps.ckan_dev_2_9.outcome }}" == "failure" ]] && exit 1
+          [[ "${{ steps.ckan_dev_2_9_py2.outcome }}" == "failure" ]] && exit 1
+          [[ "${{ steps.ckan_dev_2_10.outcome }}" == "failure" ]] && exit 1
